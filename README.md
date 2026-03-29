@@ -532,5 +532,4 @@ Use this list for verification after setup:
 ---
 
 If you want, the next README iteration can include request/response payload examples for each endpoint and a troubleshooting section for camera permissions, IndexedDB cleanup, and sync conflict handling.
-#   C l e a n - C a m p u s  
- 
+#
