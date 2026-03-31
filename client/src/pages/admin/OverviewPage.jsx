@@ -2,7 +2,7 @@
 // Changes from uploaded repo version:
 //   1. Complaint stat cards are now clickable links to /admin/complaints?status=X
 //      so admin can jump directly to filtered complaint lists from the dashboard
-//   2. Main stat cards also link to their respective pages (roster, tasks, flagged)
+//   2. Main stat cards also link to their respective pages (attendance, tasks, flagged)
 // Everything else unchanged.
 
 import { useState, useEffect } from 'react';
@@ -29,15 +29,15 @@ export default function OverviewPage() {
                     if (res.data.success) { setData(res.data.data); return; }
                 } catch { /* endpoint not yet deployed */ }
 
-                const [usersRes, rosterRes, tasksRes, flaggedRes] = await Promise.all([
+                const [usersRes, attendanceRes, tasksRes, flaggedRes] = await Promise.all([
                     api.get('/api/admin/users'),
-                    api.get(`/api/admin/roster?date=${todayStr()}`),
+                    api.get(`/api/admin/attendance?date=${todayStr()}`),
                     api.get(`/api/admin/tasks?date=${todayStr()}`),
                     api.get('/api/admin/flagged'),
                 ]);
                 setData({
                     users:           usersRes.data.data?.length  || 0,
-                    todayAttendance: rosterRes.data.data?.length || 0,
+                    todayAttendance: attendanceRes.data.data?.length || 0,
                     todayTasks:      tasksRes.data.data?.length  || 0,
                     flagged:
                         (flaggedRes.data.data?.attendance?.length || 0) +
@@ -67,7 +67,7 @@ export default function OverviewPage() {
             value: data?.todayAttendance  ?? 0,
             icon:  '📍',
             color: 'from-emerald-500 to-emerald-600',
-            onClick: () => navigate('/admin/roster'),
+            onClick: () => navigate('/admin/attendance'),
         },
         {
             label: 'Today Tasks',

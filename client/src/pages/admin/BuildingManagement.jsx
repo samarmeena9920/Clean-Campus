@@ -11,6 +11,31 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../utils/api';
 
+// Predefined area types
+const PREDEFINED_AREAS = [
+    'Washroom', 'Corridor', 'Classroom', 'Cafeteria', 'Library',
+    'Lab', 'Lobby', 'Office', 'Parking', 'Staircase', 'Auditorium', 'Others'
+];
+
+// Generate block names (A, B, C, etc.)
+const generateBlocks = (count) => {
+    const blocks = [];
+    for (let i = 0; i < count; i++) {
+        blocks.push(`Block ${String.fromCharCode(65 + i)}`);
+    }
+    return blocks;
+};
+
+// Generate floor names
+const generateFloors = (count) => {
+    const floors = [];
+    const floorNames = ['Ground Floor', 'First Floor', 'Second Floor', 'Third Floor', 'Fourth Floor', 'Fifth Floor', 'Sixth Floor', 'Seventh Floor', 'Eighth Floor', 'Ninth Floor', 'Tenth Floor'];
+    for (let i = 0; i < count && i < floorNames.length; i++) {
+        floors.push(floorNames[i]);
+    }
+    return floors;
+};
+
 // ─── Tag Input component ──────────────────────────────────────────────────────
 // Press Enter or comma to add a tag, click × to remove it.
 function TagInput({ label, tags, onChange, placeholder }) {
@@ -59,6 +84,125 @@ function TagInput({ label, tags, onChange, placeholder }) {
                 />
             </div>
             <p className="text-slate-600 text-[10px]">Press Enter or comma to add. Backspace to remove last.</p>
+        </div>
+    );
+}
+
+// ─── Block Count Selector ─────────────────────────────────────────────────────
+function BlockCountSelector({ blocks, onChange }) {
+    const blockCount = blocks.filter(b => b !== 'None').length;
+    
+    const handleCountChange = (e) => {
+        const count = parseInt(e.target.value) || 0;
+        if (count === 0) {
+            onChange(['None']);
+        } else {
+            onChange(generateBlocks(count));
+        }
+    };
+
+    return (
+        <div className="space-y-1.5">
+            <label className="block text-xs font-medium text-slate-400 uppercase tracking-wide">
+                Number of Blocks
+            </label>
+            <div className="flex items-center gap-3">
+                <select
+                    value={blockCount === 0 ? 0 : blockCount}
+                    onChange={handleCountChange}
+                    className="flex-1 px-4 py-3 bg-slate-800/60 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option value="0">No Blocks</option>
+                    {Array.from({ length: 26 }, (_, i) => (
+                        <option key={i + 1} value={i + 1}>{i + 1} Block{i + 1 === 1 ? '' : 's'}</option>
+                    ))}
+                </select>
+            </div>
+            {blockCount > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                    {blocks
+                        .filter(b => b !== 'None')
+                        .map((block) => (
+                            <span key={block} className="px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-lg">
+                                {block}
+                            </span>
+                        ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Floor Count Selector ────────────────────────────────────────────────────
+function FloorCountSelector({ floors, onChange }) {
+    const floorCount = floors.length;
+    
+    const handleCountChange = (e) => {
+        const count = parseInt(e.target.value) || 0;
+        onChange(generateFloors(count));
+    };
+
+    return (
+        <div className="space-y-1.5">
+            <label className="block text-xs font-medium text-slate-400 uppercase tracking-wide">
+                Number of Floors
+            </label>
+            <div className="flex items-center gap-3">
+                <select
+                    value={floorCount}
+                    onChange={handleCountChange}
+                    className="flex-1 px-4 py-3 bg-slate-800/60 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option value="0">No Floors</option>
+                    {Array.from({ length: 11 }, (_, i) => (
+                        <option key={i} value={i}>{i} Floor{i === 1 ? '' : 's'}</option>
+                    ))}
+                </select>
+            </div>
+            {floorCount > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                    {floors.map((floor) => (
+                        <span key={floor} className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-lg">
+                            {floor}
+                        </span>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Area Types Selector ──────────────────────────────────────────────────────
+function AreaTypesSelector({ areaTypes, onChange }) {
+    const toggleArea = (area) => {
+        if (areaTypes.includes(area)) {
+            onChange(areaTypes.filter(a => a !== area));
+        } else {
+            onChange([...areaTypes, area]);
+        }
+    };
+
+    return (
+        <div className="space-y-2">
+            <label className="block text-xs font-medium text-slate-400 uppercase tracking-wide">
+                Select Area Types
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                {PREDEFINED_AREAS.map((area) => (
+                    <button
+                        key={area}
+                        type="button"
+                        onClick={() => toggleArea(area)}
+                        className={`px-3 py-2 text-xs font-medium rounded-lg transition-all ${
+                            areaTypes.includes(area)
+                                ? 'bg-teal-600 text-teal-50 ring-2 ring-teal-400'
+                                : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                        }`}
+                    >
+                        {area}
+                    </button>
+                ))}
+            </div>
         </div>
     );
 }
@@ -194,23 +338,17 @@ export default function BuildingManagement() {
                         />
                     </div>
 
-                    <TagInput
-                        label="Blocks"
-                        tags={form.blocks}
-                        onChange={(t) => setForm({ ...form, blocks: t })}
-                        placeholder="e.g. Block A, Block B, None"
+                    <BlockCountSelector
+                        blocks={form.blocks}
+                        onChange={(b) => setForm({ ...form, blocks: b })}
                     />
-                    <TagInput
-                        label="Floors"
-                        tags={form.floors}
-                        onChange={(t) => setForm({ ...form, floors: t })}
-                        placeholder="e.g. Ground Floor, First Floor"
+                    <FloorCountSelector
+                        floors={form.floors}
+                        onChange={(f) => setForm({ ...form, floors: f })}
                     />
-                    <TagInput
-                        label="Area Types"
-                        tags={form.areaTypes}
-                        onChange={(t) => setForm({ ...form, areaTypes: t })}
-                        placeholder="e.g. Washroom, Corridor, Classroom"
+                    <AreaTypesSelector
+                        areaTypes={form.areaTypes}
+                        onChange={(at) => setForm({ ...form, areaTypes: at })}
                     />
 
                     {createError && (
@@ -320,23 +458,17 @@ export default function BuildingManagement() {
                                                 className="w-full px-4 py-2.5 bg-slate-800/60 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             />
                                         </div>
-                                        <TagInput
-                                            label="Blocks"
-                                            tags={editForm.blocks}
-                                            onChange={(t) => setEditForm({ ...editForm, blocks: t })}
-                                            placeholder="Add block…"
+                                        <BlockCountSelector
+                                            blocks={editForm.blocks}
+                                            onChange={(b) => setEditForm({ ...editForm, blocks: b })}
                                         />
-                                        <TagInput
-                                            label="Floors"
-                                            tags={editForm.floors}
-                                            onChange={(t) => setEditForm({ ...editForm, floors: t })}
-                                            placeholder="Add floor…"
+                                        <FloorCountSelector
+                                            floors={editForm.floors}
+                                            onChange={(f) => setEditForm({ ...editForm, floors: f })}
                                         />
-                                        <TagInput
-                                            label="Area Types"
-                                            tags={editForm.areaTypes}
-                                            onChange={(t) => setEditForm({ ...editForm, areaTypes: t })}
-                                            placeholder="Add area type…"
+                                        <AreaTypesSelector
+                                            areaTypes={editForm.areaTypes}
+                                            onChange={(at) => setEditForm({ ...editForm, areaTypes: at })}
                                         />
                                         {saveError && <p className="text-red-400 text-sm">{saveError}</p>}
                                         <button

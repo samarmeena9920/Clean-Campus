@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import api from '../../utils/api';
 
-export default function RosterPage() {
-    const [roster, setRoster] = useState([]);
+export default function AttendancePage() {
+    const [attendance, setAttendance] = useState([]);
     const [date, setDate] = useState(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10));
     const [loading, setLoading] = useState(true);
 
@@ -10,10 +10,10 @@ export default function RosterPage() {
         (async () => {
             setLoading(true);
             try {
-                const { data } = await api.get(`/api/admin/roster?date=${date}`);
-                setRoster(data.data || []);
+                const { data } = await api.get(`/api/admin/attendance?date=${date}`);
+                setAttendance(data.data || []);
             } catch (err) {
-                console.error('[roster]', err);
+                console.error('[attendance]', err);
             } finally {
                 setLoading(false);
             }
@@ -24,7 +24,7 @@ export default function RosterPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-white">Live Roster</h1>
+                    <h1 className="text-2xl font-bold text-white">Live Attendance</h1>
                     <p className="text-slate-400 text-sm mt-1">Worker check-in locations</p>
                 </div>
                 <input
@@ -37,7 +37,7 @@ export default function RosterPage() {
 
             {loading ? (
                 <div className="text-center py-12 text-slate-500">Loading...</div>
-            ) : roster.length === 0 ? (
+            ) : attendance.length === 0 ? (
                 <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-12 text-center">
                     <p className="text-slate-500">No attendance records for this date</p>
                 </div>
@@ -57,7 +57,7 @@ export default function RosterPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {roster.map((r, i) => (
+                                {attendance.map((r, i) => (
                                     <tr key={i} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
                                         <td className="px-5 py-3.5">
                                             <div>

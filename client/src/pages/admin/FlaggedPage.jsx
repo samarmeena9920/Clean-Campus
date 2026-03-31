@@ -4,6 +4,7 @@ import api from '../../utils/api';
 export default function FlaggedPage() {
     const [data, setData] = useState({ attendance: [], tasks: [], inventory: [] });
     const [loading, setLoading] = useState(true);
+    const [reviewingId, setReviewingId] = useState(null);
 
     const load = async () => {
         setLoading(true);
@@ -20,11 +21,38 @@ export default function FlaggedPage() {
     useEffect(() => { load(); }, []);
 
     const reviewTask = async (taskId, note) => {
+        setReviewingId(taskId);
         try {
             await api.patch(`/api/admin/tasks/${taskId}/review`, { note: note || 'Reviewed by admin' });
-            load();
+            await load();
         } catch (err) {
             console.error('[review]', err);
+        } finally {
+            setReviewingId(null);
+        }
+    };
+
+    const reviewAttendance = async (attendanceId, note) => {
+        setReviewingId(attendanceId);
+        try {
+            await api.patch(`/api/admin/attendance/${attendanceId}/review`, { note: note || 'Reviewed by admin' });
+            await load();
+        } catch (err) {
+            console.error('[review attendance]', err);
+        } finally {
+            setReviewingId(null);
+        }
+    };
+
+    const reviewInventory = async (inventoryId, note) => {
+        setReviewingId(inventoryId);
+        try {
+            await api.patch(`/api/admin/inventory/${inventoryId}/review`, { note: note || 'Reviewed by admin' });
+            await load();
+        } catch (err) {
+            console.error('[review inventory]', err);
+        } finally {
+            setReviewingId(null);
         }
     };
 
@@ -59,7 +87,16 @@ export default function FlaggedPage() {
                                         <p className="text-white text-sm font-medium">{r.worker?.name} <span className="text-slate-500">({r.worker?.employeeCode})</span></p>
                                         <p className="text-slate-500 text-xs">Date: {r.date} • Drift: {r.timeDriftSeconds}s</p>
                                     </div>
-                                    <span className="px-2.5 py-1 bg-red-500/15 text-red-400 text-xs font-medium rounded-lg">⚠ {Math.floor(r.timeDriftSeconds / 60)}m drift</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="px-2.5 py-1 bg-red-500/15 text-red-400 text-xs font-medium rounded-lg">⚠ {Math.floor(r.timeDriftSeconds / 60)}m drift</span>
+                                        <button
+                                            onClick={() => reviewAttendance(r._id)}
+                                            disabled={reviewingId === r._id}
+                                            className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 text-xs font-medium rounded-lg hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                                        >
+                                            {reviewingId === r._id ? 'Reviewing...' : '✓ Mark Reviewed'}
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -80,9 +117,10 @@ export default function FlaggedPage() {
                                         </div>
                                         <button
                                             onClick={() => reviewTask(t._id)}
+                                            disabled={reviewingId === t._id}
                                             className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 text-xs font-medium rounded-lg hover:bg-emerald-500/20 transition-colors"
                                         >
-                                            ✓ Mark Reviewed
+                                            {reviewingId === t._id ? 'Reviewing...' : '✓ Mark Reviewed'}
                                         </button>
                                     </div>
                                     {(t.beforePhotoUrl || t.afterPhotoUrl) && (
@@ -108,7 +146,16 @@ export default function FlaggedPage() {
                                         <p className="text-white text-sm font-medium">{inv.worker?.name} — {inv.item?.name}</p>
                                         <p className="text-slate-500 text-xs">Qty: {inv.qty} • Drift: {inv.timeDriftSeconds}s</p>
                                     </div>
-                                    <span className="px-2.5 py-1 bg-red-500/15 text-red-400 text-xs font-medium rounded-lg">⚠ Flagged</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="px-2.5 py-1 bg-red-500/15 text-red-400 text-xs font-medium rounded-lg">⚠ Flagged</span>
+                                        <button
+                                            onClick={() => reviewInventory(inv._id)}
+                                            disabled={reviewingId === inv._id}
+                                            className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 text-xs font-medium rounded-lg hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                                        >
+                                            {reviewingId === inv._id ? 'Reviewing...' : '✓ Mark Reviewed'}
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>

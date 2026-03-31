@@ -10,7 +10,7 @@ const navItems = [
     { to: '/admin',            label: 'Overview',    icon: '📊', end: true },
     { to: '/admin/complaints', label: 'Complaints',  icon: '📋' },
     { to: '/admin/buildings',  label: 'Buildings',   icon: '🏢' }, // ← NEW
-    { to: '/admin/roster',     label: 'Roster',      icon: '📍' },
+    { to: '/admin/attendance', label: 'Attendance', icon: '📍' },
     { to: '/admin/tasks',      label: 'Task Audit',  icon: '🖼️' },
     { to: '/admin/inventory',  label: 'Inventory',   icon: '📦' },
     { to: '/admin/users',      label: 'Users',       icon: '👥' },

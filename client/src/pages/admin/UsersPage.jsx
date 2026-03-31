@@ -35,9 +35,11 @@ export default function UsersPage() {
     const [selectedEditBuilding, setSelectedEditBuilding] = useState('');
     const [selectedEditBlock, setSelectedEditBlock] = useState('');
     const [savingEdit, setSavingEdit] = useState(false);
+    const [deletingCode, setDeletingCode] = useState('');
+    const [deleteCandidate, setDeleteCandidate] = useState(null);
 
     // Filter state — lets admin see only one role at a time
-    const [roleFilter, setRoleFilter] = useState('all');
+    const [roleFilter, setRoleFilter] = useState('Worker');
 
     const load = async () => {
         setLoading(true);
@@ -116,6 +118,29 @@ export default function UsersPage() {
             load();
         } catch (err) {
             console.error('[toggle]', err);
+        }
+    };
+
+    const askDeleteWorker = (user) => {
+        if (user.role !== 'Worker') return;
+        setDeleteCandidate(user);
+    };
+
+    const confirmDeleteWorker = async () => {
+        if (!deleteCandidate) return;
+
+        setError('');
+        setSuccess('');
+        setDeletingCode(deleteCandidate.employeeCode);
+        try {
+            await api.delete(`/api/admin/users/${deleteCandidate.employeeCode}`);
+            setSuccess(`Deleted worker: ${deleteCandidate.employeeCode} — ${deleteCandidate.name}`);
+            await load();
+            setDeleteCandidate(null);
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to delete worker');
+        } finally {
+            setDeletingCode('');
         }
     };
 
@@ -428,6 +453,15 @@ export default function UsersPage() {
                                                 >
                                                     {u.isActive ? 'Deactivate' : 'Activate'}
                                                 </button>
+                                                {u.role === 'Worker' && (
+                                                    <button
+                                                        onClick={() => askDeleteWorker(u)}
+                                                        disabled={deletingCode === u.employeeCode}
+                                                        className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 disabled:opacity-50"
+                                                    >
+                                                        {deletingCode === u.employeeCode ? 'Deleting...' : 'Delete'}
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -573,6 +607,46 @@ export default function UsersPage() {
                             </button>
                         </div>
                     </form>
+                </div>
+            )}
+
+            {deleteCandidate && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+                        <div>
+                            <h3 className="text-white text-lg font-semibold">Delete Worker</h3>
+                            <p className="text-slate-400 text-sm mt-1">
+                                Are you sure you want to delete this worker?
+                            </p>
+                        </div>
+
+                        <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-3">
+                            <p className="text-white text-sm font-medium">{deleteCandidate.name}</p>
+                            <p className="text-slate-500 text-xs mt-0.5">{deleteCandidate.employeeCode}</p>
+                        </div>
+
+                        <p className="text-rose-400 text-xs">
+                            This action cannot be undone.
+                        </p>
+
+                        <div className="flex items-center justify-end gap-2 pt-1">
+                            <button
+                                type="button"
+                                onClick={() => setDeleteCandidate(null)}
+                                className="px-4 py-2 rounded-xl text-sm bg-slate-800 text-slate-300 hover:bg-slate-700"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={confirmDeleteWorker}
+                                disabled={deletingCode === deleteCandidate.employeeCode}
+                                className="px-4 py-2 rounded-xl text-sm bg-rose-600 text-white hover:bg-rose-500 disabled:opacity-50"
+                            >
+                                {deletingCode === deleteCandidate.employeeCode ? 'Deleting...' : 'Yes, Delete'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

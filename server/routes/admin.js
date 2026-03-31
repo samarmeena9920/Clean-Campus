@@ -24,7 +24,7 @@ router.get('/overview', async (req, res, next) => {
       .toISOString()
       .slice(0, 10);
 
-    const [users, roster, tasks, flagged, complaintStats] = await Promise.all([
+    const [users, attendance, tasks, flagged, complaintStats] = await Promise.all([
       User.find({}).countDocuments(),
       Attendance.find({ date: today }).countDocuments(),
       Task.find({ date: today }).countDocuments(),
@@ -52,7 +52,7 @@ router.get('/overview', async (req, res, next) => {
       success: true,
       data: {
         users,
-        todayAttendance: roster,
+        todayAttendance: attendance,
         todayTasks:      tasks,
         flagged:         flagged[0] + flagged[1] + flagged[2],
         complaints: {
@@ -106,16 +106,32 @@ router.patch('/users/:employeeCode', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ─── Roster (unchanged) ──────────────────────────────────────────────────────
+router.delete('/users/:employeeCode', async (req, res, next) => {
+  try {
+    const user = await User.findOne({ employeeCode: req.params.employeeCode });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
 
-router.get('/roster', async (req, res, next) => {
+    if (user.role !== 'Worker') {
+      return res.status(400).json({ success: false, message: 'Only worker accounts can be deleted' });
+    }
+
+    await User.deleteOne({ _id: user._id });
+    res.json({ success: true, message: 'Worker deleted successfully' });
+  } catch (err) { next(err); }
+});
+
+// ─── Attendance ──────────────────────────────────────────────────────────────
+
+router.get('/attendance', async (req, res, next) => {
   try {
     const date = req.query.date || new Date().toISOString().slice(0, 10);
     const records = await Attendance.find({ date })
       .populate('worker', 'name employeeCode assignedAreas')
       .lean();
 
-    const roster = records.map((r) => ({
+    const attendance = records.map((r) => ({
       employeeCode:  r.worker?.employeeCode,
       name:          r.worker?.name,
       assignedAreas: r.worker?.assignedAreas,
@@ -126,7 +142,19 @@ router.get('/roster', async (req, res, next) => {
       flagged:       r.flaggedForReview,
     }));
 
-    res.json({ success: true, date, data: roster });
+    res.json({ success: true, date, data: attendance });
+  } catch (err) { next(err); }
+});
+
+router.patch('/attendance/:id/review', async (req, res, next) => {
+  try {
+    const attendance = await Attendance.findByIdAndUpdate(
+      req.params.id,
+      { $set: { flaggedForReview: false, reviewNote: req.body.note } },
+      { new: true }
+    );
+    if (!attendance) return res.status(404).json({ success: false, message: 'Attendance record not found' });
+    res.json({ success: true, data: attendance });
   } catch (err) { next(err); }
 });
 
@@ -140,7 +168,12 @@ router.get('/tasks', async (req, res, next) => {
     if (req.query.flagged)  filter.flaggedForReview = req.query.flagged === 'true';
     if (req.query.aiStatus) filter.photoAiStatus = req.query.aiStatus;
     if (req.query.workerId) filter.worker = req.query.workerId;
-    if (req.query.area)     filter.area = req.query.area;
+    
+    // Handle building filter — match tasks where area starts with or contains the building name
+    if (req.query.building) {
+      const building = req.query.building.trim();
+      filter.area = { $regex: `^${building}`, $options: 'i' };
+    }
 
     const tasks = await Task.find(filter)
       .populate('worker', 'name employeeCode')
@@ -175,6 +208,18 @@ router.get('/inventory', async (req, res, next) => {
       { $sort: { item: 1 } },
     ]);
     res.json({ success: true, data: summary });
+  } catch (err) { next(err); }
+});
+
+router.patch('/inventory/:id/review', async (req, res, next) => {
+  try {
+    const inventoryTx = await InventoryTx.findByIdAndUpdate(
+      req.params.id,
+      { $set: { flaggedForReview: false, reviewNote: req.body.note } },
+      { new: true }
+    );
+    if (!inventoryTx) return res.status(404).json({ success: false, message: 'Inventory record not found' });
+    res.json({ success: true, data: inventoryTx });
   } catch (err) { next(err); }
 });
 

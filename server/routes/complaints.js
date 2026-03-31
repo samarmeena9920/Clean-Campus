@@ -305,6 +305,7 @@ router.get('/mine', protect(['Student']), async (req, res, next) => {
     const complaints = await Complaint.find({ student: req.user._id })
       .sort({ createdAt: -1 })
       .populate('assignedTo', 'name employeeCode')
+      .populate('linkedTaskId', 'area status beforePhotoUrl afterPhotoUrl startedAt completedAt durationSeconds')
       .lean();
     res.json({ success: true, total: complaints.length, data: complaints });
   } catch (err) {
@@ -328,6 +329,7 @@ router.get('/', protect(['Admin']), async (req, res, next) => {
       .populate('student', 'name employeeCode email')
       .populate('assignedTo', 'name employeeCode')
       .populate('assignedBy', 'name')
+      .populate('linkedTaskId', 'area status beforePhotoUrl afterPhotoUrl startedAt completedAt durationSeconds photoAiStatus photoAiNote')
       .lean();
 
     res.json({ success: true, total: complaints.length, data: complaints });
@@ -428,12 +430,21 @@ router.patch('/:id/assign', protect(['Admin']), async (req, res, next) => {
 // ─── PATCH /api/complaints/:id/verify ────────────────────────────────────────
 router.patch('/:id/verify', protect(['Admin']), async (req, res, next) => {
   try {
-    const complaint = await Complaint.findByIdAndUpdate(
-      req.params.id,
-      { $set: { status: 'verified', isAdminVerified: true, reviewNote: req.body.note } },
-      { new: true }
-    );
+    const complaint = await Complaint.findById(req.params.id).populate('linkedTaskId');
     if (!complaint) return res.status(404).json({ success: false, message: 'Not found' });
+
+    const task = complaint.linkedTaskId;
+    if (!task || !task.beforePhotoUrl || !task.afterPhotoUrl) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot verify until worker before/after photos are available',
+      });
+    }
+
+    complaint.status = 'verified';
+    complaint.isAdminVerified = true;
+    complaint.reviewNote = req.body.note;
+    await complaint.save();
     res.json({ success: true, data: complaint });
   } catch (err) {
     next(err);
@@ -451,10 +462,30 @@ router.patch('/:id/reopen', protect(['Student']), async (req, res, next) => {
     if (complaint.status !== 'verified') {
       return res.status(400).json({ success: false, message: 'Only verified complaints can be reopened' });
     }
-    complaint.status       = 'reopened';
+    complaint.status = 'reopened';
     complaint.reopenReason = req.body.reason;
+    complaint.isAdminVerified = false;
     await complaint.save();
-    res.json({ success: true, data: complaint });
+
+    let autoAssigned = { assigned: false };
+    try {
+      autoAssigned = await autoAssignComplaint(complaint);
+    } catch (assignErr) {
+      console.warn('[reopen auto-assign] failed:', assignErr.message);
+    }
+
+    res.json({
+      success: true,
+      autoAssigned: autoAssigned.assigned,
+      assignedWorker: autoAssigned.assigned
+        ? {
+            _id: autoAssigned.worker._id,
+            name: autoAssigned.worker.name,
+            employeeCode: autoAssigned.worker.employeeCode,
+          }
+        : null,
+      data: complaint,
+    });
   } catch (err) {
     next(err);
   }

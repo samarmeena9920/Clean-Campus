@@ -23,6 +23,60 @@ const CATEGORY_LABELS = {
     general_cleaning: 'General Cleaning',
 };
 
+function BeforeAfterSlider({ beforeSrc, afterSrc }) {
+    const [position, setPosition] = useState(50);
+
+    return (
+        <div className="bg-slate-800/30 border border-slate-700 rounded-xl p-2">
+            <div className="flex items-center justify-between mb-2">
+                <p className="text-slate-400 text-[11px] uppercase tracking-wide">Worker Cleanup Comparison</p>
+                <p className="text-slate-500 text-[11px]">Drag slider</p>
+            </div>
+
+            <div className="relative w-full h-56 rounded-lg overflow-hidden border border-slate-700 bg-slate-900">
+                <img
+                    src={afterSrc}
+                    alt="Worker after"
+                    className="absolute inset-0 w-full h-full object-cover"
+                />
+
+                <div
+                    className="absolute inset-0"
+                    style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}
+                >
+                    <img
+                        src={beforeSrc}
+                        alt="Worker before"
+                        className="w-full h-full object-cover"
+                    />
+                </div>
+
+                <div
+                    className="absolute top-0 bottom-0 w-0.5 bg-white/90"
+                    style={{ left: `${position}%`, transform: 'translateX(-50%)' }}
+                />
+                <div
+                    className="absolute top-1/2 -translate-y-1/2 w-6 h-6 rounded-full border-2 border-white bg-slate-900"
+                    style={{ left: `${position}%`, transform: 'translate(-50%, -50%)' }}
+                />
+
+                <span className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/60 text-white text-[10px]">Before</span>
+                <span className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/60 text-white text-[10px]">After</span>
+            </div>
+
+            <input
+                type="range"
+                min="0"
+                max="100"
+                value={position}
+                onChange={(e) => setPosition(Number(e.target.value))}
+                className="w-full mt-3 accent-blue-500"
+                aria-label="Compare before and after photos"
+            />
+        </div>
+    );
+}
+
 export default function ComplaintsAdminPage() {
     const [complaints, setComplaints] = useState([]);
     const [workers, setWorkers] = useState([]);
@@ -161,6 +215,8 @@ export default function ComplaintsAdminPage() {
                         const isExpanded = expanded === c._id;
                         const isAssigning = actionLoading === c._id + '-assign';
                         const isVerifying = actionLoading === c._id + '-verify';
+                        const linkedTask = c.linkedTaskId && typeof c.linkedTaskId === 'object' ? c.linkedTaskId : null;
+                        const hasWorkerEvidence = Boolean(linkedTask?.beforePhotoUrl && linkedTask?.afterPhotoUrl);
 
                         return (
                             <div key={c._id} className="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden hover:border-slate-700 transition-all">
@@ -218,8 +274,56 @@ export default function ComplaintsAdminPage() {
 
                                 {isExpanded && (
                                     <div className="border-t border-slate-800 p-4 space-y-4">
-                                        {c.photoUrl && (
-                                            <img src={c.photoUrl} alt="Complaint" className="w-full rounded-xl border border-slate-700 max-h-60 object-cover" />
+                                        <div className={`grid grid-cols-1 ${hasWorkerEvidence ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-3`}>
+                                            <div className="bg-slate-800/30 border border-slate-700 rounded-xl p-2">
+                                                <p className="text-slate-400 text-[11px] mb-2 uppercase tracking-wide">Student Complaint Photo</p>
+                                                {c.photoUrl ? (
+                                                    <img src={c.photoUrl} alt="Student complaint" className="w-full rounded-lg border border-slate-700 max-h-56 object-cover" />
+                                                ) : (
+                                                    <div className="h-40 rounded-lg border border-dashed border-slate-700 flex items-center justify-center text-slate-500 text-xs">
+                                                        No student photo
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {hasWorkerEvidence ? (
+                                                <BeforeAfterSlider
+                                                    beforeSrc={linkedTask.beforePhotoUrl}
+                                                    afterSrc={linkedTask.afterPhotoUrl}
+                                                />
+                                            ) : (
+                                                <>
+                                                    <div className="bg-slate-800/30 border border-slate-700 rounded-xl p-2">
+                                                        <p className="text-slate-400 text-[11px] mb-2 uppercase tracking-wide">Worker Before Photo</p>
+                                                        {linkedTask?.beforePhotoUrl ? (
+                                                            <img src={linkedTask.beforePhotoUrl} alt="Worker before" className="w-full rounded-lg border border-slate-700 max-h-56 object-cover" />
+                                                        ) : (
+                                                            <div className="h-40 rounded-lg border border-dashed border-slate-700 flex items-center justify-center text-slate-500 text-xs">
+                                                                No before photo yet
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="bg-slate-800/30 border border-slate-700 rounded-xl p-2">
+                                                        <p className="text-slate-400 text-[11px] mb-2 uppercase tracking-wide">Worker After Photo</p>
+                                                        {linkedTask?.afterPhotoUrl ? (
+                                                            <img src={linkedTask.afterPhotoUrl} alt="Worker after" className="w-full rounded-lg border border-slate-700 max-h-56 object-cover" />
+                                                        ) : (
+                                                            <div className="h-40 rounded-lg border border-dashed border-slate-700 flex items-center justify-center text-slate-500 text-xs">
+                                                                No after photo yet
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                        {linkedTask && (
+                                            <div className="bg-slate-800/30 border border-slate-700 rounded-xl p-3 flex flex-wrap items-center gap-2">
+                                                <span className="text-slate-400 text-xs">Task Evidence:</span>
+                                                <span className="px-2 py-0.5 bg-slate-700 text-slate-300 text-xs rounded-md">{linkedTask.area || 'Area not set'}</span>
+                                                <span className="px-2 py-0.5 bg-slate-700 text-slate-300 text-xs rounded-md">Status: {linkedTask.status || 'N/A'}</span>
+                                                {linkedTask.photoAiStatus && linkedTask.photoAiStatus !== 'unchecked' && (
+                                                    <span className="px-2 py-0.5 bg-slate-700 text-slate-300 text-xs rounded-md">AI: {linkedTask.photoAiStatus}</span>
+                                                )}
+                                            </div>
                                         )}
                                         {c.description && (
                                             <p className="text-slate-300 text-sm bg-slate-800/40 rounded-xl p-3">{c.description}</p>
@@ -291,6 +395,11 @@ export default function ComplaintsAdminPage() {
                                                         </span>
                                                     )}
                                                 </p>
+                                                {!hasWorkerEvidence && (
+                                                    <p className="text-amber-400 text-xs bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                                                        Worker before/after photos are required before admin verification.
+                                                    </p>
+                                                )}
                                                 <input
                                                     type="text"
                                                     value={verifyNote}
@@ -300,7 +409,7 @@ export default function ComplaintsAdminPage() {
                                                 />
                                                 <button
                                                     onClick={() => handleVerify(c._id)}
-                                                    disabled={isVerifying}
+                                                    disabled={isVerifying || !hasWorkerEvidence}
                                                     className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-all hover:scale-[1.02]"
                                                 >
                                                     {isVerifying ? 'Verifying...' : '✓ Mark as Verified'}

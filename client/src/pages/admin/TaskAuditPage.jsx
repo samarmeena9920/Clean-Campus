@@ -25,7 +25,7 @@ export default function TaskAuditPage() {
                 if (filter === 'flagged') url += '&flagged=true';
                 if (filter === 'ai_flagged') url += '&aiStatus=flagged_identical';
                 if (workerFilter !== 'all') url += `&workerId=${workerFilter}`;
-                if (areaFilter !== 'all') url += `&area=${encodeURIComponent(areaFilter)}`;
+                if (areaFilter !== 'all') url += `&building=${encodeURIComponent(areaFilter)}`;
 
                 const { data } = await api.get(url);
                 setTasks(data.data || []);
@@ -37,16 +37,22 @@ export default function TaskAuditPage() {
         })();
     }, [date, filter, workerFilter, areaFilter]);
 
-    // Extract unique workers and areas from fetched users
+    // Extract unique workers from fetched users
     const workers = useMemo(() => users.filter(u => u.role === 'Worker'), [users]);
-    const areas = useMemo(() => {
-        const allAreas = new Set();
+
+    // Extract unique buildings from areas (handle both "Building" and "Building - Block" formats)
+    const buildings = useMemo(() => {
+        const allBuildings = new Set();
         users.forEach(u => {
             if (u.assignedAreas) {
-                u.assignedAreas.forEach(a => allAreas.add(a));
+                u.assignedAreas.forEach(a => {
+                    // Extract building name (part before " - " or whole string)
+                    const building = a.split(' - ')[0].trim();
+                    if (building) allBuildings.add(building);
+                });
             }
         });
-        return Array.from(allAreas).sort();
+        return Array.from(allBuildings).sort();
     }, [users]);
 
     return (
@@ -62,9 +68,9 @@ export default function TaskAuditPage() {
                         onChange={(e) => setAreaFilter(e.target.value)}
                         className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                        <option value="all">All Buildings/Areas</option>
-                        {areas.map(area => (
-                            <option key={area} value={area}>{area}</option>
+                        <option value="all">All Buildings</option>
+                        {buildings.map(building => (
+                            <option key={building} value={building}>{building}</option>
                         ))}
                     </select>
 
